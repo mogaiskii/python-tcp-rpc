@@ -54,9 +54,30 @@ class TcpRpcServer(object):
         logger.error('stop signal caught')
         if self._should_stop is True:
             logger.fatal('immediate stop')
+            self._listener.close()
             sys.exit(1)
         self._should_stop = True
-        self._listener.close()
+
+    def _listen(self):
+        while not self._should_stop:
+            try:
+                connection, addr = self._listener.accept()
+            except OSError:
+                if self._should_stop:
+                    break
+                else:
+                    raise
+
+            if self._should_stop:
+                connection.close()
+                continue
+
+            # TODO: wait until end
+            # TODO: mb keep-connection
+            worker = threading.Thread(
+                target=self._handle,
+                args=(connection, addr)
+            ).start()
 
     def serve(self, host='127.0.0.1', port=5445, pool=5):
         logger.info('server ignition...')
@@ -69,18 +90,14 @@ class TcpRpcServer(object):
 
         logger.info('server is ready {}:{}'.format(host, port))
 
+        listener = threading.Thread(
+            target=self._listen
+        )
+        listener.start()
         while not self._should_stop:
-            connection, addr = self._listener.accept()
-            if self._should_stop:
-                connection.close()
-                continue
-
-            # TODO: wait until end
-            # TODO: mb keep-connection
-            worker = threading.Thread(
-                target=self._handle,
-                args=(connection, addr)
-            ).start()
+            pass
+        listener.join(5)
+        self._listener.close()
 
     def method(self, route):
         def wrapper(func):
