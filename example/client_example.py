@@ -28,10 +28,20 @@ class ExampleClient(TcpRpcClient):
 if __name__ == '__main__':
     client = ExampleClient()
     connection = TcpJRpcConnectionHelper.connect()
+
+    print('--> Concat("abc","def")')
     print(client.concat('abc', 'def'))
+
     c1 = MathContract.make_request(connection, operation=MathOperations.add, item_a=3, item_b=5)
+    print('\n--> MathContract(add, 3, 5)')
     print(c1)
+
     c2 = client.perform(MathContract(operation=MathOperations.add, item_a=3, item_b=5))
+    print('\n--> MathContract(add, 3, 5)')
     print(c2)
+
+    print('\n--> Math(*, 3, 5)')
     print(client.math('*', 3, 5))
+
+    print('\n--> whoami')
     print(client.whoami())

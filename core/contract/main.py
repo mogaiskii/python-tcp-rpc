@@ -1,9 +1,12 @@
+import inspect
+
 from core.contract.fields import Field
 
 
 class ContractPartition(object):
     def __init__(self, proto):
         self._proto = proto
+        self._fields = self.get_fields()
 
     def get_fields(self):
         fields = dict()
@@ -15,15 +18,18 @@ class ContractPartition(object):
             fields[name] = value
         return fields
 
+    def is_plain(self):
+        if getattr(self._proto, 'plain', False):
+            if len(self._fields) != 1:
+                raise RuntimeError('Incorrect partition - `plain` was used with multiple fields')
+            return True
+        return False
+
     def clean_data(self, data):
         validated = dict()
-        fields = self.get_fields()
-        plain = False
-        if getattr(self._proto, 'plain', False):
-            assert len(fields) == 1
-            plain = True
+        plain = self.is_plain()
 
-        for field_name, field in fields.items():
+        for field_name, field in self._fields.items():
             if plain:
                 value = data
             else:
@@ -51,6 +57,25 @@ class ContractPartition(object):
             setattr(obj, name, value)
         return obj
 
+    def check_fields(self, args, varargs, varkw):
+        if self.is_plain():
+            return bool(varargs)
+
+        used_args = set()
+
+        for field_name, _ in self._fields.items():
+            if field_name in args:
+                used_args.add(field_name)
+                continue
+            if bool(varkw):
+                continue
+            return False
+
+        if set(args) - used_args:
+            return False
+
+        return True
+
 
 class Contract(object):
     __method__ = None
@@ -72,7 +97,9 @@ class Contract(object):
 
     @classmethod
     def make_request(cls, connection, **data):
-        assert cls.__method__
+        if not cls.__method__:
+            raise RuntimeError('Incorrect contract - __method__ was not provided')
+
         request_data = cls._prepare_data(data, cls.Request)
         connection.send_request(connection.generate_id(), cls.__method__, request_data)
         response = connection.recv_response()
@@ -87,3 +114,18 @@ class Contract(object):
     @classmethod
     def _prepare_data(cls, data, partition):
         return ContractPartition(partition).clean_data(data)
+
+    @classmethod
+    def implement(cls, app):
+        def wrapper(func):
+            # TODO: mb validation errors, both, req and resp, in wrapper
+            arg_spec = inspect.getfullargspec(func)
+            partition = ContractPartition(cls.Request)
+            if not partition.check_fields(arg_spec.args, arg_spec.varargs, arg_spec.varkw):
+                raise RuntimeError(
+                    'Incorrect contract implementation - check args {}'.format(func.__name__)
+                )
+
+            app.function_method(cls.__method__)(func)
+            return func
+        return wrapper

@@ -1,5 +1,5 @@
 from core.connection import TcpJRpcConnectionHelper
-from core.utils import generate_id
+from core.utils import generate_id, TEST_ROUTE
 
 
 class TcpRpcClient(object):
@@ -28,5 +28,5 @@ class TcpRpcClient(object):
         response = self.make_request(id, method, **params)
         return contract_request.parse_response(response.result)
 
-    def test(self):
-        return self.make_request(self.generate_id(), 'test')
+    def check(self):
+        return self.make_request(self.generate_id(), TEST_ROUTE)

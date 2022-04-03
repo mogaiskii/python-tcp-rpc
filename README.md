@@ -22,6 +22,7 @@ app.serve()
 ```python
 from core.contract import Contract
 from core.contract.fields import StrField
+from <...> import app
 
 
 class ConcatContract(Contract):
@@ -34,6 +35,12 @@ class ConcatContract(Contract):
     class Response:
         result = StrField()
     Response.plain = True
+
+
+@ConcatContract.implement(app)
+def concat(item_a, item_b):
+    return str(item_a) + str(item_b)
+
 ```
 
 
@@ -41,6 +48,7 @@ class ConcatContract(Contract):
 
 ```python
 from client import TcpRpcClient
+from <...> import ConcatContract
 
 
 client = TcpRpcClient()
@@ -51,13 +59,15 @@ client.perform(ConcatContract(item_a='abc', item_b='def'))  # == 'abcdef'
 
 ### See more examples in `example/`
 
+Running examples:
+1. start example/server_example.py
+2. run example/client_example.py
+
 
 ## TODO:
 
-- listener thread (non-main one)
 - refactoring
   + contracts
-  + MathContract.implement
   + ContractPartition.make_object
 - graceful stop
 - tests

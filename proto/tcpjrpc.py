@@ -43,7 +43,8 @@ class TcpJsonRpcProto(object):
 
     @classmethod
     def decode_length(cls, raw_header_data):
-        assert raw_header_data, 'empty data'
+        if not raw_header_data:
+            raise ValueError('empty data')
 
         content_length = int(raw_header_data)
         return content_length

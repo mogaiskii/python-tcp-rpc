@@ -1,5 +1,6 @@
 from operator import add, mul, sub
 
+from example.contract_example import MathContract
 from server import TcpRpcServer
 
 
@@ -11,7 +12,7 @@ def example_concat(item_a, item_b):
     return str(item_a) + str(item_b)
 
 
-@app.function_method('math')
+@MathContract.implement(app)
 def example_math_handler(operation, item_a, item_b):
     ops = {
         '+': add,
@@ -25,11 +26,6 @@ def example_math_handler(operation, item_a, item_b):
 @app.method('whoami')
 def example_whoami(request):
     return request.addr
-
-
-# @MathContract.implement(app)
-# def example_math_handler(operation, item_a, item_b):
-#     pass
 
 
 if __name__ == '__main__':
